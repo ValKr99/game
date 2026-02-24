@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Гра: Кредитний Архів Ощадбанку</title>
+<style>
+  body { font-family: 'Arial', sans-serif; background-color: #e8f5e9; padding: 10px; text-align: center; margin: 0; color: #333; }
+  
+  /* Екрани */
+  .screen { display: none; max-width: 1000px; margin: auto; }
+  .screen.active { display: block; }
+
+  /* Зображення маскота */
+  .mascot-img-large { width: 120px; height: auto; margin-bottom: 10px; }
+  .mascot-img-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #81c784; }
+
+  /* Стартовий екран */
+  .start-box, .result-box { background: white; border-radius: 15px; padding: 25px; margin-top: 30px; border: 2px solid #2e7d32; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+  .btn { background: #2e7d32; color: white; border: none; padding: 12px 25px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; transition: 0.2s; width: 100%; max-width: 300px; }
+  .btn:hover { background: #1b5e20; }
+
+  /* Хедер та таймер */
+  .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 10px; margin-bottom: 15px; border: 2px solid #2e7d32; font-weight: bold; }
+  .header-content { display: flex; align-items: center; gap: 10px; text-align: left; font-size: 13px; line-height: 1.3; }
+  .timer { font-size: 18px; color: #d32f2f; min-width: 50px; text-align: right; }
+
+  /* Банк документів */
+  .doc-bank { background: #fff; padding: 10px; border-radius: 12px; border: 2px dashed #81c784; min-height: 80px; max-height: 220px; overflow-y: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 15px; }
+  .doc { background: #fff9c4; border: 2px solid #fbc02d; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; transition: 0.2s; user-select: none; }
+  .doc.selected { background: #fff176; border-color: #f57f17; transform: scale(1.05); box-shadow: 0 0 8px rgba(245, 127, 23, 0.5); }
+  
+  /* Папки */
+  .folders { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .folder { background: #ffffff; border: 2px solid #81c784; border-radius: 10px; padding: 10px; min-height: 90px; cursor: pointer; display: flex; flex-direction: column; transition: 0.2s; }
+  .folder h3 { font-size: 11px; margin: 0 0 8px 0; color: #2e7d32; text-transform: uppercase; border-bottom: 1px solid #c8e6c9; padding-bottom: 5px; }
+  
+  /* Контейнер для документів всередині папок */
+  .folder-content { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+  .folder-content .doc { font-size: 9px; padding: 4px; border-width: 1px; } 
+
+  /* Результати */
+  .error-list { text-align: left; background: #fff; padding: 15px; border-radius: 8px; border: 2px solid #ef9a9a; margin-top: 15px; font-size: 13px; max-height: 350px; overflow-y: auto; box-shadow: inset 0 0 5px rgba(0,0,0,0.05); }
+  .error-list ul { margin: 5px 0 0 0; padding: 0; list-style: none; }
+  .error-list li { padding: 8px; border-bottom: 1px solid #fce4ec; line-height: 1.4; }
+  .error-list li:last-child { border-bottom: none; }
+  .success-text { color: #2e7d32; font-size: 24px; font-weight: bold; margin: 10px 0; }
+  .fail-text { color: #c62828; font-size: 24px; font-weight: bold; margin: 10px 0; }
+  
+  .target-folder-hint { color: #2e7d32; font-weight: bold; }
+  .wrong-folder-hint { color: #c62828; text-decoration: line-through; }
+
+  .note { background: #fff3e0; padding: 10px; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 15px; font-size: 14px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div id="screen-start" class="screen active">
+  <div class="start-box">
+    <img src="oshchadyk.png" alt="Ощадик" class="mascot-img-large" onerror="this.style.display='none';">
+    <h2>Вітаю в симуляторі Кредитного Архіву!</h2>
+    <div class="note">Кількість папок може відрізнятись в залежності від банківського продукту.</div>
+    <p style="text-align: left; line-height: 1.6; font-size: 14px;">
+      <strong>Твоє завдання:</strong> правильно розсортувати всі документи по відповідних папках.<br><br>
+      <strong>Правила:</strong><br>
+      1. Оберіть документ натиснувши на нього.<br>
+      2. Натисніть на відповідну папку куди його розмістити.<br>
+      3. Документи щодо нерухомості розділяються на "Основне" та "Додаткове" забезпечення.<br>
+      4. Час на виконання: <strong>5 хвилин</strong>.<br>
+      5. Прохідний бал: <strong>80%</strong>.
+    </p>
+    <button class="btn" onclick="startGame()">Розпочати тест</button>
+  </div>
+</div>
+
+<div id="screen-game" class="screen">
+  <div class="header">
+    <div class="header-content">
+      <img src="oshchadyk.png" alt="Ощадик" class="mascot-img-small" onerror="this.style.display='none';">
+      <div><strong>Ощадик:</strong><br><span id="instruction-text">Оберіть документ натиснувши на нього.</span></div>
+    </div>
+    <div class="timer" id="timer-display">05:00</div>
+  </div>
+
+  <div class="doc-bank" id="doc-bank"></div>
+
+  <div class="folders" id="folders-container">
+    <div class="folder" onclick="placeInFolder('f_pos')"><h3>📁 Позичальник</h3><div class="folder-content" id="f_pos"></div></div>
+    <div class="folder" onclick="placeInFolder('f_por_fin')"><h3>📁 Поручитель (Фін.)</h3><div class="folder-content" id="f_por_fin"></div></div>
+    <div class="folder" onclick="placeInFolder('f_por_may')"><h3>📁 Майновий поручитель</h3><div class="folder-content" id="f_por_may"></div></div>
+    <div class="folder" onclick="placeInFolder('f_zast_osn')"><h3>🏠 Заставне майно (Основне)</h3><div class="folder-content" id="f_zast_osn"></div></div>
+    <div class="folder" onclick="placeInFolder('f_zast_dod')"><h3>🚗 Заставне майно (Додаткове)</h3><div class="folder-content" id="f_zast_dod"></div></div>
+    <div class="folder" onclick="placeInFolder('f_ocinka')"><h3>📊 Оцінка (Майн. поруч.)</h3><div class="folder-content" id="f_ocinka"></div></div>
+    <div class="folder" onclick="placeInFolder('f_prod')"><h3>🤝 Продавець нерухомості</h3><div class="folder-content" id="f_prod"></div></div>
+    <div class="folder" onclick="placeInFolder('f_kk')"><h3>⚖️ Рішення КК</h3><div class="folder-content" id="f_kk"></div></div>
+    <div class="folder" onclick="placeInFolder('f_doopr')"><h3>♻️ Доопрацювання</h3><div class="folder-content" id="f_doopr"></div></div>
+  </div>
+  <button class="btn" style="width: 100%; max-width: none; margin-top: 20px;" onclick="submitAnswers()">Відповісти</button>
+</div>
+
+<div id="screen-result" class="screen">
+  <div class="result-box">
+    <img src="oshchadyk.png" alt="Ощадик" class="mascot-img-large" onerror="this.style.display='none';">
+    <h2 id="result-title"></h2>
+    <p>Твій бал: <strong id="result-score" style="font-size: 20px;"></strong></p>
+    
+    <div id="mistakes-container" class="error-list" style="display: none;">
+      <strong>Аналіз помилок:</strong>
+      <ul id="mistakes-list"></ul>
+    </div>
+
+    <button class="btn" id="retry-btn" onclick="location.reload()" style="display: none;">Спробувати ще раз</button>
+  </div>
+</div>
+
+<script>
+  // Назви папок для виводу помилок
+  const folderNames = {
+    'f_pos': 'Позичальник',
+    'f_por_fin': 'Поручитель (Фін.)',
+    'f_por_may': 'Майновий поручитель',
+    'f_zast_osn': 'Заставне майно (Основне)',
+    'f_zast_dod': 'Заставне майно (Додаткове)',
+    'f_ocinka': 'Оцінка (Майн. поруч.)',
+    'f_prod': 'Продавець нерухомості',
+    'f_kk': 'Рішення КК',
+    'f_doopr': 'Доопрацювання'
+  };
+
+  const documentData = [
+    { id: 'p1', title: 'Кредитна заявка (xlsm) [Позичальник]', target: 'f_pos' },
+    { id: 'p2', title: 'Паспорт, РНОКПП [Позичальник]', target: 'f_pos' },
+    { id: 'p3', title: 'Документи щодо сімейного стану та дітей [Позичальник]', target: 'f_pos' },
+    { id: 'p4', title: 'Інформація про зобов’язання перед іншими фінустановами [Позичальник]', target: 'f_pos' },
+    { id: 'p5', title: 'Інформація з БКІ [Позичальник]*', target: 'f_pos' },
+    { id: 'p6', title: 'Дохід [Позичальник]', target: 'f_pos' },
+    { id: 'p7', title: 'Розрахунок фінансового стану', target: 'f_pos' },
+    { id: 'fp1', title: 'Заявка поручителя (xlsm)', target: 'f_por_fin' },
+    { id: 'fp2', title: 'Паспорт, РНОКПП [Поручитель]', target: 'f_por_fin' },
+    { id: 'fp3', title: 'Документи щодо сімейного стану [Поручитель]', target: 'f_por_fin' },
+    { id: 'fp4', title: 'Інформація про зобов’язання перед іншими фінустановами [Поручитель]', target: 'f_por_fin' },
+    { id: 'fp5', title: 'Інформація з БКІ [Поручитель]*', target: 'f_por_fin' },
+    { id: 'fp6', title: 'Дохід [Поручитель]', target: 'f_por_fin' },
+    { id: 'mp1', title: 'Заявка поручителя (майнового) (xlsm)', target: 'f_por_may' },
+    { id: 'mp2', title: 'Паспорт, РНОКПП [Майновий поручитель]', target: 'f_por_may' },
+    { id: 'mp3', title: 'Документи щодо сімейного стану та дітей [Майновий пор.]', target: 'f_por_may' },
+    { id: 'mp4', title: 'Інформація про зобов’язання перед іншими фінустановами [Майновий пор.]', target: 'f_por_may' },
+    { id: 'mp5', title: 'Інформація з БКІ [Майновий поручитель]*', target: 'f_por_may' },
+    { id: 'z1', title: 'Документи щодо нерухомості, що придбаватиметься', target: 'f_zast_osn' },
+    { id: 'z2', title: 'Документи щодо додаткового забезпечення', target: 'f_zast_dod' },
+    { id: 'o1', title: 'Експертна оцінка майна майнового поручителя', target: 'f_ocinka' },
+    { id: 'pr1', title: 'Документи продавця нерухомості', target: 'f_prod' },
+    { id: 'kk1', title: 'Рішення КК', target: 'f_kk' },
+    { id: 'do1', title: 'Лист про доопрацювання', target: 'f_doopr' }
+  ];
+
+  let selectedDocElement = null;
+  let timeLeft = 300; // 5 хвилин
+  let timerInterval;
+  const totalDocs = documentData.length;
+
+  function initGame() {
+    const bank = document.getElementById('doc-bank');
+    documentData.sort(() => Math.random() - 0.5).forEach(doc => {
+      const el = document.createElement('div');
+      el.className = 'doc';
+      el.innerText = doc.title;
+      el.dataset.target = doc.target;
+      el.dataset.title = doc.title;
+      el.onclick = (e) => handleDocClick(e, el);
+      bank.appendChild(el);
+    });
+  }
+
+  function handleDocClick(event, el) {
+    event.stopPropagation();
+    if (el.parentElement.id !== 'doc-bank' && selectedDocElement !== el) {
+      document.getElementById('doc-bank').appendChild(el);
+      if (selectedDocElement) selectedDocElement.classList.remove('selected');
+      selectedDocElement = null;
+      document.getElementById('instruction-text').innerText = "Оберіть документ натиснувши на нього.";
+      return;
+    }
+    if (selectedDocElement === el) {
+      el.classList.remove('selected');
+      selectedDocElement = null;
+      document.getElementById('instruction-text').innerText = "Оберіть документ натиснувши на нього.";
+    } else {
+      if (selectedDocElement) selectedDocElement.classList.remove('selected');
+      selectedDocElement = el;
+      el.classList.add('selected');
+      document.getElementById('instruction-text').innerText = "Тепер натисніть на відповідну папку куди його розмістити.";
+    }
+  }
+
+  function placeInFolder(folderId) {
+    if (!selectedDocElement) return;
+    document.getElementById(folderId).appendChild(selectedDocElement);
+    selectedDocElement.classList.remove('selected');
+    selectedDocElement = null;
+    document.getElementById('instruction-text').innerText = "Оберіть документ натиснувши на нього.";
+  }
+
+  function startGame() {
+    document.getElementById('screen-start').classList.remove('active');
+    document.getElementById('screen-game').classList.add('active');
+    initGame();
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+      let s = (timeLeft % 60).toString().padStart(2, '0');
+      document.getElementById('timer-display').innerText = `${m}:${s}`;
+      if (timeLeft <= 0) submitAnswers();
+    }, 1000);
+  }
+
+  function submitAnswers() {
+    clearInterval(timerInterval);
+    document.getElementById('screen-game').classList.remove('active');
+    document.getElementById('screen-result').classList.add('active');
+
+    const allDocs = document.querySelectorAll('.doc');
+    let correctCount = 0;
+    let mistakesHTML = '';
+
+    allDocs.forEach(doc => {
+      const currentParentId = doc.parentElement.id;
+      const correctTargetId = doc.dataset.target;
+      const docTitle = doc.dataset.title;
+
+      if (currentParentId === correctTargetId) {
+        correctCount++;
+      } else {
+        const currentFolderName = folderNames[currentParentId] || "Банку документів (не відсортовано)";
+        const correctFolderName = folderNames[correctTargetId];
+        mistakesHTML += `<li>
+          📄 <strong>${docTitle}</strong><br>
+          <span class="wrong-folder-hint">Було в: ${currentFolderName}</span><br>
+          <span class="target-folder-hint">Мало бути: ${correctFolderName}</span>
+        </li>`;
+      }
+    });
+
+    const percent = Math.round((correctCount / totalDocs) * 100);
+    document.getElementById('result-score').innerText = `${percent}% (${correctCount} з ${totalDocs})`;
+    
+    const titleEl = document.getElementById('result-title');
+    if (percent >= 80) {
+      titleEl.innerText = "Молодець! 🎉";
+      titleEl.className = "success-text";
+    } else {
+      titleEl.innerText = "Не засмучуйся, давай спробуємо ще!";
+      titleEl.className = "fail-text";
+      document.getElementById('retry-btn').style.display = "inline-block";
+    }
+
+    if (mistakesHTML !== '') {
+      document.getElementById('mistakes-container').style.display = "block";
+      document.getElementById('mistakes-list').innerHTML = mistakesHTML;
+    }
+  }
+</script>
+</body>
+</html>
